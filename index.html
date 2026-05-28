@@ -77,7 +77,7 @@
                 Scraped Payment Default Ledger
             </h1>
             <p class="text-charcoal/60 text-sm font-light leading-relaxed">
-                Structured, queryable statistics extracted directly from the micro-registries of the Indian Ministry of MSME. Explore cumulative disputes, pending liabilities, and active cases by buyer category or specific central ministries.
+                Structured, queryable statistics extracted directly from the micro-registries of the Indian Ministry of MSME. Explore cumulative disputes, pending liabilities, and active cases by buyer category, or perform a direct, nationwide dispute search on individual public sector buyers and ministries.
             </p>
         </div>
 
@@ -91,8 +91,8 @@
                 <button onclick="switchTab('pending')" id="tab-btn-pending" class="px-4 py-2.5 rounded border border-charcoal/15 transition-all duration-300 text-charcoal/60 hover:text-charcoal bg-transparent">
                     Pending Exposure
                 </button>
-                <button onclick="switchTab('ministry')" id="tab-btn-ministry" class="px-4 py-2.5 rounded border border-charcoal/15 transition-all duration-300 text-charcoal/60 hover:text-charcoal bg-transparent">
-                    Central Ministries
+                <button onclick="switchTab('master')" id="tab-btn-master" class="px-4 py-2.5 rounded border border-charcoal/15 transition-all duration-300 text-charcoal/60 hover:text-charcoal bg-transparent">
+                    Dispute Search
                 </button>
             </div>
 
@@ -121,7 +121,7 @@
             </div>
 
             <!-- Scrollable Table Container -->
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto" id="table-container">
                 <table class="w-full text-left text-xs divide-y divide-charcoal/10" id="data-table">
                     <thead class="bg-linen/50 text-[10px] uppercase font-bold tracking-wider text-charcoal/60" id="table-head">
                         <!-- Injected -->
@@ -130,6 +130,11 @@
                         <!-- Injected -->
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Master Search Grid Display View (Only shown in 'master' search tab) -->
+            <div class="hidden grid grid-cols-1 md:grid-cols-2 gap-6" id="master-search-grid">
+                <!-- Injected dynamically as beautiful corporate default cards -->
             </div>
 
             <!-- Bottom Note -->
@@ -141,7 +146,7 @@
 
     </main>
 
-    <!-- Footer Footnote -->
+    <!-- Aesthetic Footnote Footer -->
     <footer class="max-w-6xl mx-auto w-full border-t border-charcoal/10 mt-12 py-6 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-4 text-[10px] text-charcoal/40 select-none">
         <p>© 2026 MSME Samadhaan Scraper Index. Engineered by Alfred.</p>
         <div class="flex items-center gap-4.5">
@@ -164,28 +169,27 @@
         let rawData = {
             category: [],
             pending: [],
-            ministry: []
+            master: []
         };
         let filteredData = [];
 
         // Dynamic Loading of JSON datasets
         async function loadDatasets() {
             try {
-                const [catRes, pendRes, minRes] = await Promise.all([
+                const [catRes, pendRes, mastRes] = await Promise.all([
                     fetch('data/msme_category_amounts.json'),
                     fetch('data/msme_pending_amounts.json'),
-                    fetch('data/msme_ministry_disputes.json')
+                    fetch('data/msme_master_disputes.json')
                 ]);
 
                 rawData.category = await catRes.json();
                 rawData.pending = await pendRes.json();
-                rawData.ministry = await minRes.json();
+                rawData.master = await mastRes.json();
 
                 // Set initial view
                 switchTab('category');
             } catch (err) {
                 console.error("Error loading JSON datasets, falling back to embedded datasets...", err);
-                // Fallback dummy database if files are not served properly directly in iframe testing
                 setupFallbackData();
                 switchTab('category');
             }
@@ -195,32 +199,36 @@
             rawData.category = [
                 { "s_no": "1", "category": "Central Ministries", "filed_count": 1741, "filed_amount_cr": 689.45, "rejected_count": 442, "rejected_amount_cr": 130.1, "mutually_settled_count": 380, "mutually_settled_amount_cr": 36.58 },
                 { "s_no": "2", "category": "Central Department", "filed_count": 3206, "filed_amount_cr": 1224.27, "rejected_count": 891, "rejected_amount_cr": 337.26, "mutually_settled_count": 663, "mutually_settled_amount_cr": 90.29 },
-                { "s_no": "3", "category": "Central PSU", "filed_count": 7905, "filed_amount_cr": 5979.87, "rejected_count": 1703, "rejected_amount_cr": 1162.59, "mutually_settled_count": 1826, "mutually_settled_amount_cr": 688.74 },
-                { "s_no": "4", "category": "Railway Zone", "filed_count": 1166, "filed_amount_cr": 246.92, "rejected_count": 25, "rejected_amount_cr": 9.31, "mutually_settled_count": 230, "mutually_settled_amount_cr": 63.57 },
-                { "s_no": "5", "category": "State Govt.", "filed_count": 13111, "filed_amount_cr": 7258.47, "rejected_count": 3962, "rejected_amount_cr": 1876.32, "mutually_settled_count": 1251, "mutually_settled_amount_cr": 231.07 },
-                { "s_no": "6", "category": "Proprietorship", "filed_count": 67006, "filed_amount_cr": 5103.36, "rejected_count": 2235, "rejected_amount_cr": 1759.58, "mutually_settled_count": 3832, "mutually_settled_amount_cr": 219.28 }
+                { "s_no": "3", "category": "Central PSU", "filed_count": 7905, "filed_amount_cr": 5979.87, "rejected_count": 1703, "rejected_amount_cr": 1162.59, "mutually_settled_count": 1826, "mutually_settled_amount_cr": 688.74 }
             ];
             rawData.pending = [
                 { "s_no": "1", "category": "Central Ministries", "filed_count": 1741, "filed_amount_cr": 689.45, "pending_applications_count": 307, "pending_applications_amount_cr": 123.99, "total_pending_amount_cr": 240.55 },
                 { "s_no": "2", "category": "Central Department", "filed_count": 3206, "filed_amount_cr": 1224.27, "pending_applications_count": 467, "pending_applications_amount_cr": 154.12, "total_pending_amount_cr": 446.06 },
-                { "s_no": "3", "category": "Central PSU", "filed_count": 7905, "filed_amount_cr": 5979.87, "pending_applications_count": 1085, "pending_applications_amount_cr": 519.74, "total_pending_amount_cr": 2085.54 },
-                { "s_no": "4", "category": "State Govt.", "filed_count": 13111, "filed_amount_cr": 7258.47, "pending_applications_count": 2037, "pending_applications_amount_cr": 2037.15, "total_pending_amount_cr": 2968.69 }
+                { "s_no": "3", "category": "Central PSU", "filed_count": 7905, "filed_amount_cr": 5979.87, "pending_applications_count": 1085, "pending_applications_amount_cr": 519.74, "total_pending_amount_cr": 2085.54 }
             ];
-            rawData.ministry = [
-                { "s_no": "1", "ministry": "Ministry of Railways", "applications_filed": 382, "converted_into_cases": 30, "mutually_settled": 97, "total_active_disputes": 382 },
-                { "s_no": "2", "ministry": "Ministry of Atomic Energy", "applications_filed": 100, "converted_into_cases": 2, "mutually_settled": 43, "total_active_disputes": 90 },
-                { "s_no": "3", "ministry": "Ministry of Labour and Employment", "applications_filed": 100, "converted_into_cases": 13, "mutually_settled": 22, "total_active_disputes": 100 },
-                { "s_no": "4", "ministry": "Ministry of Housing & Urban Affairs", "applications_filed": 92, "converted_into_cases": 25, "mutually_settled": 14, "total_active_disputes": 79 },
-                { "s_no": "5", "ministry": "Ministry of Electronics and IT", "applications_filed": 86, "converted_into_cases": 10, "mutually_settled": 11, "total_active_disputes": 86 }
+            rawData.master = [
+                { "entity": "BHARAT SANCHAR NIGAM LTD. / Ministry of Communications", "category": "Central PSU", "filed_applications": 2186, "converted_into_cases": 211, "disposed_by_council": 1008, "mutually_settled": 180, "total_active_disputes": 2040 },
+                { "entity": "INDIAN OIL CORPORATION LTD. / Ministry of Petroleum", "category": "Central PSU", "filed_applications": 650, "converted_into_cases": 84, "disposed_by_council": 77, "mutually_settled": 264, "total_active_disputes": 484 },
+                { "entity": "BHARAT HEAVY ELECTRICALS LTD. / Ministry of Heavy Industries", "category": "Central PSU", "filed_applications": 571, "converted_into_cases": 92, "disposed_by_council": 127, "mutually_settled": 186, "total_active_disputes": 255 },
+                { "entity": "NTPC LTD. / Ministry of Power", "category": "Central PSU", "filed_applications": 238, "converted_into_cases": 16, "disposed_by_council": 25, "mutually_settled": 176, "total_active_disputes": 84 },
+                { "entity": "Ministry of Railways", "category": "Central Ministries", "filed_applications": 382, "converted_into_cases": 30, "disposed_by_council": 62, "mutually_settled": 97, "total_active_disputes": 382 }
             ];
         }
 
         function switchTab(tabName) {
             activeTab = tabName;
             document.getElementById('table-filter').value = '';
+            
+            // Adjust search placeholder dynamically
+            const filterInput = document.getElementById('table-filter');
+            if (tabName === 'master') {
+                filterInput.placeholder = "Search Company, PSU or Ministry (e.g. BSNL, ONGC)...";
+            } else {
+                filterInput.placeholder = "Search rows...";
+            }
 
             // Update Tab UI Buttons
-            const tabs = ['category', 'pending', 'ministry'];
+            const tabs = ['category', 'pending', 'master'];
             tabs.forEach(t => {
                 const btn = document.getElementById(`tab-btn-${t}`);
                 if (t === tabName) {
@@ -234,11 +242,22 @@
             const titles = {
                 category: "Respondent Category Amounts Audit",
                 pending: "Respondent Pending Exposure Summary",
-                ministry: "Central Indian Ministries Active Disputes"
+                master: "Direct Search: Delayed Payment Disputes Database"
             };
             document.getElementById('display-title').innerText = titles[tabName];
 
-            // Trigger table rebuild
+            // Toggle element visibility
+            const tableContainer = document.getElementById('table-container');
+            const gridContainer = document.getElementById('master-search-grid');
+            
+            if (tabName === 'master') {
+                tableContainer.classList.add('hidden');
+                gridContainer.classList.remove('hidden');
+            } else {
+                tableContainer.classList.remove('hidden');
+                gridContainer.classList.add('hidden');
+            }
+
             filteredData = [...rawData[tabName]];
             renderTable();
         }
@@ -250,8 +269,8 @@
             if (!query) {
                 filteredData = [...source];
             } else {
-                if (activeTab === 'ministry') {
-                    filteredData = source.filter(r => r.ministry.toLowerCase().includes(query));
+                if (activeTab === 'master') {
+                    filteredData = source.filter(r => r.entity.toLowerCase().includes(query) || r.category.toLowerCase().includes(query));
                 } else {
                     filteredData = source.filter(r => r.category.toLowerCase().includes(query));
                 }
@@ -262,17 +281,22 @@
         function renderTable() {
             const head = document.getElementById('table-head');
             const body = document.getElementById('table-body');
+            const grid = document.getElementById('master-search-grid');
 
             head.innerHTML = '';
             body.innerHTML = '';
+            grid.innerHTML = '';
 
             if (filteredData.length === 0) {
-                body.innerHTML = `<tr><td colspan="10" class="px-5 py-8 text-center text-charcoal/40 font-light italic">No matching audited rows found.</td></tr>`;
+                if (activeTab === 'master') {
+                    grid.innerHTML = `<div class="col-span-2 py-12 text-center text-charcoal/40 font-light italic">No matching audited corporate buyers or ministries found. Try typing a keyword like 'BSNL', 'Railways', or 'IOCL'.</div>`;
+                } else {
+                    body.innerHTML = `<tr><td colspan="10" class="px-5 py-8 text-center text-charcoal/40 font-light italic">No matching audited rows found.</td></tr>`;
+                }
                 return;
             }
 
             if (activeTab === 'category') {
-                // Header Category
                 head.innerHTML = `
                     <tr>
                         <th class="px-5 py-3 w-12">S.No</th>
@@ -285,7 +309,6 @@
                         <th class="px-5 py-3 text-right">Settled (₹ Cr)</th>
                     </tr>
                 `;
-                // Rows Category
                 filteredData.forEach(r => {
                     body.innerHTML += `
                         <tr class="hover:bg-linen/25 transition-colors">
@@ -301,7 +324,6 @@
                     `;
                 });
             } else if (activeTab === 'pending') {
-                // Header Pending
                 head.innerHTML = `
                     <tr>
                         <th class="px-5 py-3 w-12">S.No</th>
@@ -314,7 +336,6 @@
                         <th class="px-5 py-3 text-right text-crimson">Total Pending (₹ Cr)</th>
                     </tr>
                 `;
-                // Rows Pending
                 filteredData.forEach(r => {
                     body.innerHTML += `
                         <tr class="hover:bg-linen/25 transition-colors">
@@ -329,33 +350,50 @@
                         </tr>
                     `;
                 });
-            } else if (activeTab === 'ministry') {
-                // Header Ministry
-                head.innerHTML = `
-                    <tr>
-                        <th class="px-5 py-3 w-12">S.No</th>
-                        <th class="px-5 py-3">Central Ministry Name</th>
-                        <th class="px-5 py-3 text-right">Applications Filed</th>
-                        <th class="px-5 py-3 text-right">Converted to Cases</th>
-                        <th class="px-5 py-3 text-right">Disposed Disputes</th>
-                        <th class="px-5 py-3 text-right">Mutually Settled</th>
-                        <th class="px-5 py-3 text-right text-crimson">Active Litigation Rows</th>
-                    </tr>
-                `;
-                // Rows Ministry
-                filteredData.forEach(r => {
-                    body.innerHTML += `
-                        <tr class="hover:bg-linen/25 transition-colors">
-                            <td class="px-5 py-3.5 font-mono text-charcoal/40">${r.s_no}</td>
-                            <td class="px-5 py-3.5 font-semibold text-charcoal">${r.ministry}</td>
-                            <td class="px-5 py-3.5 text-right font-mono">${r.applications_filed || 0}</td>
-                            <td class="px-5 py-3.5 text-right font-mono">${r.converted_into_cases || 0}</td>
-                            <td class="px-5 py-3.5 text-right font-mono">${r.disposed_by_council || 0}</td>
-                            <td class="px-5 py-3.5 text-right font-mono text-sage">${r.mutually_settled || 0}</td>
-                            <td class="px-5 py-3.5 text-right font-mono text-crimson font-bold">${r.total_active_disputes || 0}</td>
-                        </tr>
+            } else if (activeTab === 'master') {
+                // Render beautiful, minimalist card layouts for each matched company/PSU/ministry
+                // Limit to top 50 rows in view for high performance
+                const displaySubset = filteredData.slice(0, 50);
+                
+                displaySubset.forEach((r, idx) => {
+                    const statusClass = r.total_active_disputes > 0 ? "border-crimson/25 bg-crimson/5 text-crimson" : "border-sage/25 bg-sage/5 text-sage";
+                    const statusText = r.total_active_disputes > 0 ? `${r.total_active_disputes} Active Disputes` : "Audit Clear";
+                    
+                    grid.innerHTML += `
+                        <div class="border border-charcoal/10 rounded-lg p-5 bg-bone space-y-4 shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-all duration-300 hover:border-charcoal/35">
+                            <div class="flex justify-between items-start gap-4">
+                                <div class="space-y-1">
+                                    <span class="text-[9px] font-bold tracking-widest uppercase text-charcoal/40 font-mono">${r.category}</span>
+                                    <h4 class="font-serif text-lg font-bold text-charcoal leading-tight">${r.entity}</h4>
+                                </div>
+                                <span class="text-[10px] font-bold tracking-widest uppercase border px-2.5 py-0.5 rounded flex-shrink-0 select-none ${statusClass}">${statusText}</span>
+                            </div>
+
+                            <div class="grid grid-cols-4 gap-2 text-center border-t border-charcoal/5 pt-3">
+                                <div>
+                                    <span class="text-[9px] text-charcoal/40 font-semibold uppercase tracking-wider block">Applications Filed</span>
+                                    <span class="text-sm font-semibold font-mono text-charcoal">${r.filed_applications}</span>
+                                </div>
+                                <div>
+                                    <span class="text-[9px] text-charcoal/40 font-semibold uppercase tracking-wider block">Converted Cases</span>
+                                    <span class="text-sm font-semibold font-mono text-charcoal">${r.converted_into_cases}</span>
+                                </div>
+                                <div>
+                                    <span class="text-[9px] text-charcoal/40 font-semibold uppercase tracking-wider block">Disposed Cases</span>
+                                    <span class="text-sm font-semibold font-mono text-charcoal">${r.disposed_by_council}</span>
+                                </div>
+                                <div>
+                                    <span class="text-[9px] text-charcoal/40 font-semibold uppercase tracking-wider block">Mutually Settled</span>
+                                    <span class="text-sm font-semibold font-mono text-sage">${r.mutually_settled}</span>
+                                </div>
+                            </div>
+                        </div>
                     `;
                 });
+                
+                if (filteredData.length > 50) {
+                    grid.innerHTML += `<div class="col-span-2 py-3 text-center text-charcoal/40 text-[10px] font-light">Showing first 50 of ${filteredData.length} matching entities. Refine your query for more precise results.</div>`;
+                }
             }
         }
 
